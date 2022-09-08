@@ -1,0 +1,9 @@
+torch
+torchvision
+pytorch-lightning 
+tensorboard
+
+numpy
+PyYAML
+rich
+opencv-python
