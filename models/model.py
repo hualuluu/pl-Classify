@@ -109,8 +109,8 @@ class MutiCls_Classify(pl.LightningModule):
         loss = step_output["loss"]
         acc = step_output["acc"]
 
-        self.log('train_step_loss', loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
-        self.log('train_step_acc', acc, on_step=True, on_epoch=False, prog_bar=True, logger=True)
+        # self.log('train_step_loss', loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
+        # self.log('train_step_acc', acc, on_step=True, on_epoch=False, prog_bar=True, logger=True)
 
     def training_epoch_end(self, outputs):
         # since the training step/validation step and test step are run on the IPU device
@@ -149,8 +149,8 @@ class MutiCls_Classify(pl.LightningModule):
         loss = step_output["loss"]
         acc = step_output["acc"]
 
-        self.log('val_step_loss', loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
-        self.log('val_step_acc', acc, on_step=True, on_epoch=False, prog_bar=True, logger=True)
+        # self.log('val_step_loss', loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
+        # self.log('val_step_acc', acc, on_step=True, on_epoch=False, prog_bar=True, logger=True)
 
     def validation_epoch_end(self, outputs):
         # since the training step/validation step and test step are run on the IPU device
