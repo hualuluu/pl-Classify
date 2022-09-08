@@ -6,7 +6,7 @@ num_workers: 2
 max_epoch: 50
 num_gpus: 3
 # datasets
-data_path: ./datasets/dz/
+data_path: ./datasets/
 input_dim: [256, 256]
 
 # path
@@ -23,7 +23,7 @@ optimizer_name: adm
 scheduler_name: ReduceLROnPlateau
 
 # finetune
-predicted_model_path: '/media/worker/98f56e45-a9c8-4f4e-b3f1-08a2d16a7ec1/liliang/Project/Classify/runs/20220908_resnet18/version_1/checkpoints/epoch=15-train_epoch_acc=0.90-val_epoch_acc=0.94.ckpt'
+predicted_model_path: ''
 
 # 自动搜索最佳batch
 accelerator: gpu
