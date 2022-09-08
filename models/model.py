@@ -1,15 +1,15 @@
 import torch
-import torchvision 
-import torch.nn as nn
+
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.types import STEP_OUTPUT
-from torch.nn import functional as F
+
 
 from pytorch_lightning.callbacks import ModelCheckpoint, DeviceStatsMonitor, LearningRateMonitor, RichModelSummary
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from .nets.net import Model
 from .loss.loss import Loss
+from .optimizer.optimizer import Optimizer
 
 class MutiCls_Classify(pl.LightningModule):
     def __init__(
@@ -41,39 +41,33 @@ class MutiCls_Classify(pl.LightningModule):
         
         self.model = self.load_model()
         self.loss = self.load_loss()
+        self.optimizer, self.scheduler = self.load_optimizer()
 
     def forward(self, x):
         
         return self.model(x)
 
-    def load_model(self, predicted_model_path = ''):
+    def load_model(self):
         # print(self.hparams)
         model_name = self.hparams['hparams']['model_name']
         num_classes = self.hparams['hparams']['num_classes']
+        predicted_model_path = self.hparams['hparams']['predicted_model_path']
+
         m = Model(model_name, num_classes)
-
         model = m.get_model()
-        # if predicted_model_path == '':
-        #     return model
 
-        # pretrained_dict = torch.load(predicted_model_path)['state_dict']
-        # new_pretrained_dict = {}
-        # for k, v in pretrained_dict.items():
-        #     if k in model.state_dict():
-        #         # print(k, k.split('model.')[-1])
-        #         new_k = k
-        #         new_pretrained_dict[new_k] = v
-        # model.load_state_dict(new_pretrained_dict)
+        if predicted_model_path == '':
+            return model
 
-        # model = torchvision.models.mobilenet_v2(pretrained=False)
+        pretrained_dict = torch.load(predicted_model_path)['state_dict']
+        new_pretrained_dict = {}
 
-        # # Update Model Structure
-        # model.classifier = nn.Sequential(
-        #     nn.Dropout(p=0.2),
-        #     nn.Linear(model.last_channel, model.last_channel // 2),
-        #     nn.LeakyReLU(0.1),
-        #     nn.Linear(model.last_channel // 2, 3)
-        # )
+        for k, v in pretrained_dict.items():
+            new_k = k.split('model.')[-1]
+            if new_k in model.state_dict():
+                new_pretrained_dict[new_k] = v
+        model.load_state_dict(new_pretrained_dict)
+
         return model
 
     def load_loss(self):
@@ -83,7 +77,15 @@ class MutiCls_Classify(pl.LightningModule):
         loss = l.get_loss()
         
         return loss
-     
+
+    def load_optimizer(self):
+        optimizer_name = self.hparams['hparams']['optimizer_name']
+        scheduler_name = self.hparams['hparams']['scheduler_name']
+        lr = self.hparams['hparams']['learning_rate']
+        op = Optimizer(optimizer_name, scheduler_name, self.parameters(), lr)
+        optimizer, scheduler = op.get_optimizer()
+        return optimizer, scheduler
+
     def accuracy(self, pred, label):
         # currently IPU poptorch doesn't implicit convert bools to tensor
         # hence we use an explicit calculation for accuracy here. Once fixed in poptorch
@@ -109,7 +111,7 @@ class MutiCls_Classify(pl.LightningModule):
         loss = step_output["loss"]
         acc = step_output["acc"]
 
-        # self.log('train_step_loss', loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
+        self.log('train_step_loss', loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
         # self.log('train_step_acc', acc, on_step=True, on_epoch=False, prog_bar=True, logger=True)
 
     def training_epoch_end(self, outputs):
@@ -182,24 +184,11 @@ class MutiCls_Classify(pl.LightningModule):
 
     def configure_optimizers(self):
        
-        adam = torch.optim.Adam(
-            self.parameters(), 
-            lr=self.hparams['hparams']['learning_rate'],
-        )
         return {
-            "optimizer": adam,
+            "optimizer": self.optimizer,
             "lr_scheduler": {
-                "scheduler": ReduceLROnPlateau(
-                    adam, 
-                    factor=0.6, 
-                    patience=2, 
-                    verbose=True, 
-                    mode="min", 
-                    threshold=1e-3, 
-                    min_lr=1e-8, 
-                    eps=1e-8
-                ),
-                "monitor": "val_epoch_acc",
+                "scheduler": self.scheduler,
+                "monitor": "val_epoch_loss",
                 "frequency": 1  # "indicates how often the metric is updated"
                 # If "monitor" references validation metrics, then "frequency" should be set to a
                 # multiple of "trainer.check_val_every_n_epoch".
@@ -207,8 +196,9 @@ class MutiCls_Classify(pl.LightningModule):
         }
     
     def configure_callbacks(self):
-        
+        save_path = self.hparams['hparams']['save_path']
         model_checkpoint = ModelCheckpoint(
+            dirpath=save_path,
             monitor='val_epoch_acc',
             filename='{epoch}-{train_epoch_acc:.2f}-{val_epoch_acc:.2f}',
             save_top_k=-1,
