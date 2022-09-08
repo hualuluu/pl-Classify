@@ -29,7 +29,7 @@ pip install -r requirement # -i  https://pypi.tuna.tsinghua.edu.cn/simple
   data_path：datasets/
   save_path: runs/自己的文件夹  
 
-#### 2.3 文件修改 
+#### 2.3 开始训练
 ```
 python train.py
 ```
