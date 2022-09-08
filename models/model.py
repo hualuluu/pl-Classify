@@ -1,12 +1,15 @@
 import torch
+import torchvision 
+import torch.nn as nn
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.types import STEP_OUTPUT
+from torch.nn import functional as F
 
 from pytorch_lightning.callbacks import ModelCheckpoint, DeviceStatsMonitor, LearningRateMonitor, RichModelSummary
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from .net_dict import Model
-from .loss_dict import Loss
+from .nets.net import Model
+from .loss.loss import Loss
 
 class MutiCls_Classify(pl.LightningModule):
     def __init__(
@@ -40,35 +43,45 @@ class MutiCls_Classify(pl.LightningModule):
         self.loss = self.load_loss()
 
     def forward(self, x):
+        
         return self.model(x)
 
     def load_model(self, predicted_model_path = ''):
         # print(self.hparams)
         model_name = self.hparams['hparams']['model_name']
-        m = Model(model_name)
+        num_classes = self.hparams['hparams']['num_classes']
+        m = Model(model_name, num_classes)
 
-        m.print_model
-        model = m.get_model
+        model = m.get_model()
+        # if predicted_model_path == '':
+        #     return model
 
-        if predicted_model_path == '':
-            return model
+        # pretrained_dict = torch.load(predicted_model_path)['state_dict']
+        # new_pretrained_dict = {}
+        # for k, v in pretrained_dict.items():
+        #     if k in model.state_dict():
+        #         # print(k, k.split('model.')[-1])
+        #         new_k = k
+        #         new_pretrained_dict[new_k] = v
+        # model.load_state_dict(new_pretrained_dict)
 
-        pretrained_dict = torch.load(predicted_model_path)['state_dict']
-        new_pretrained_dict = {}
-        for k, v in pretrained_dict.items():
-            if k in model.state_dict():
-                # print(k, k.split('model.')[-1])
-                new_k = k
-                new_pretrained_dict[new_k] = v
-        model.load_state_dict(new_pretrained_dict)
+        # model = torchvision.models.mobilenet_v2(pretrained=False)
 
+        # # Update Model Structure
+        # model.classifier = nn.Sequential(
+        #     nn.Dropout(p=0.2),
+        #     nn.Linear(model.last_channel, model.last_channel // 2),
+        #     nn.LeakyReLU(0.1),
+        #     nn.Linear(model.last_channel // 2, 3)
+        # )
         return model
 
     def load_loss(self):
 
         loss_name = self.hparams['hparams']['loss_name']
-        loss = Loss(loss_name)
-
+        l = Loss(loss_name)
+        loss = l.get_loss()
+        
         return loss
      
     def accuracy(self, pred, label):
@@ -84,12 +97,18 @@ class MutiCls_Classify(pl.LightningModule):
         pred = self(image)
         loss = self.loss(pred, label.squeeze())
         acc = self.accuracy(pred, label)
-        return loss, acc
+        return {
+            "loss" :loss, 
+            "acc" : acc
+            }
 
     def training_step_end(self, step_output: STEP_OUTPUT):
         # self.log('train_loss', step_output, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         # step_output 是 training_step 的 return值
-        loss, acc = step_output
+        # print(step_output)
+        loss = step_output["loss"]
+        acc = step_output["acc"]
+
         self.log('train_step_loss', loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
         self.log('train_step_acc', acc, on_step=True, on_epoch=False, prog_bar=True, logger=True)
 
@@ -97,7 +116,14 @@ class MutiCls_Classify(pl.LightningModule):
         # since the training step/validation step and test step are run on the IPU device
         # we must log the average loss outside the step functions.
         # self.log("val_acc", torch.stack(outputs).mean(), prog_bar=True, logger=True)
-        losses, accs = outputs
+        # print(outputs)
+        losses = []
+        accs = []
+        
+        for ou in outputs:
+            losses.append(ou['loss'])
+            accs.append(ou['acc'])
+
         self.log('train_epoch_loss', torch.stack(losses).mean(), on_step=False, on_epoch=True, prog_bar=True, logger=False)
         self.log('train_epoch_acc', torch.stack(accs).mean(), on_step=False, on_epoch=True, prog_bar=True, logger=False)
 
@@ -112,12 +138,17 @@ class MutiCls_Classify(pl.LightningModule):
         loss = self.loss(pred, label.squeeze())
         acc = self.accuracy(pred, label)
 
-        return loss, acc
+        return {
+            "loss" :loss, 
+            "acc" : acc
+            }
 
     def validation_step_end(self, step_output: STEP_OUTPUT):
         # self.log('train_loss', step_output, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         # step_output 是 training_step 的 return值
-        loss, acc = step_output
+        loss = step_output["loss"]
+        acc = step_output["acc"]
+
         self.log('val_step_loss', loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
         self.log('val_step_acc', acc, on_step=True, on_epoch=False, prog_bar=True, logger=True)
 
@@ -125,7 +156,14 @@ class MutiCls_Classify(pl.LightningModule):
         # since the training step/validation step and test step are run on the IPU device
         # we must log the average loss outside the step functions.
         # self.log("val_acc", torch.stack(outputs).mean(), prog_bar=True, logger=True)
-        losses, accs = outputs
+        
+        losses = []
+        accs = []
+        
+        for ou in outputs:
+            losses.append(ou['loss'])
+            accs.append(ou['acc'])
+
         self.log('val_epoch_loss', torch.stack(losses).mean(), on_step=False, on_epoch=True, prog_bar=True, logger=False)
         self.log('val_epoch_acc', torch.stack(accs).mean(), on_step=False, on_epoch=True, prog_bar=True, logger=False)
 
@@ -161,7 +199,7 @@ class MutiCls_Classify(pl.LightningModule):
                     min_lr=1e-8, 
                     eps=1e-8
                 ),
-                "monitor": "val_acc",
+                "monitor": "val_epoch_acc",
                 "frequency": 1  # "indicates how often the metric is updated"
                 # If "monitor" references validation metrics, then "frequency" should be set to a
                 # multiple of "trainer.check_val_every_n_epoch".
@@ -171,7 +209,7 @@ class MutiCls_Classify(pl.LightningModule):
     def configure_callbacks(self):
         
         model_checkpoint = ModelCheckpoint(
-            monitor='val_acc',
+            monitor='val_epoch_acc',
             filename='{epoch}-{train_epoch_acc:.2f}-{val_epoch_acc:.2f}',
             save_top_k=-1,
             save_last=True

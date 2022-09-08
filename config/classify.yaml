@@ -1,5 +1,5 @@
 # 多分类模型训练yaml文件
-batch_size: 32
+batch_size: 33
 learning_rate: 0.001
 num_classes: 3
 num_workers: 1

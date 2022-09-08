@@ -2,5 +2,6 @@ __pycache__/
 datasets/
 train_test.py
 runs/
-./hualuluu
-./hualuluu.pub
+hualuluu
+hualuluu.pub
+utils/trainer.py
