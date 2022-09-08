@@ -1,0 +1,31 @@
+# 多分类模型训练yaml文件
+batch_size: 32
+learning_rate: 0.001
+num_classes: 3
+num_workers: 1
+max_epoch: 50
+num_gpus: 3
+# datasets
+data_path: ./datasets/dz/
+input_dim: [256, 256]
+
+# path
+save_path: ./runs/20220908_resnet18/
+
+# net 
+model_name: resnet18
+
+# loss
+loss_name: cross_entropy
+
+# 自动搜索最佳batch
+accelerator: gpu
+auto_scale_batch_size: True
+auto_lr_find: True
+reload_dataloaders_every_epoch: False
+
+auto_select_gpus: False  # 自动寻找合适的GPU
+
+#混合精度
+amp_backend: native # apex
+precision: 16
