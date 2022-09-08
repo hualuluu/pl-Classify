@@ -56,6 +56,7 @@ class MutiCls_Classify(pl.LightningModule):
         m = Model(model_name, num_classes)
         model = m.get_model()
 
+        # model state dict
         if predicted_model_path == '':
             return model
 
