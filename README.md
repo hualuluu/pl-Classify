@@ -9,4 +9,4 @@ pip install -r requirement # -i  https://pypi.tuna.tsinghua.edu.cn/simple
 
 ### 2.Train： 
 
-* MutiClassify : [多类别分类常规训练] (doc/MutiClassify.md)
+* MutiClassify : 多类别分类常规训练[doc/MutiClassify.md](https://github.com/hualuluu/pl-Classify/blob/master/doc/MutiClassify.md)
