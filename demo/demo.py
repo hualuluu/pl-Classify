@@ -1,11 +1,14 @@
-import os, cv2
+import cv2
 import torch
 import torchvision 
 from PIL import Image
-import numpy as np
+import sys
+sys.path.append('../')
+from models.nets.net import Model
+imagepath = '/media/worker/e5698782-da98-4582-a058-a26abe7eea03/Datasets/dz/select_cls/datasets/budaowei/0008_normal_frame_00000114_0.jpg'
+model_path = '../runs/20220908_resnet18/version_0/weights/last.ckpt'
+print(imagepath)
 
-imagepath = '/media/worker/98f56e45-a9c8-4f4e-b3f1-08a2d16a7ec1/liliang/Project/Classify/datasets/helmet/helmet/9e6a0cac9cd55f1f509c66dd31ef334d_0.jpg'
-model_path = '/media/worker/98f56e45-a9c8-4f4e-b3f1-08a2d16a7ec1/liliang/Project/Classify/runs/20220802/weights/version_6/checkpoints/epoch=13-val_loss=0.00-other_metric=0.00.ckpt'
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 image = cv2.imread(imagepath)
@@ -16,9 +19,8 @@ image = Image.fromarray(image)
 trans = torchvision.transforms.ToTensor()
 image = trans(image).unsqueeze(0)
 
-model = torchvision.models.resnet18(pretrained=False, num_classes=2)
-model.conv1 = torch.nn.Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
-model.maxpool = torch.nn.Identity()
+m = Model('resnet18', num_classes = 3)
+model = m.get_model()
 
 # model.load_state_dict(torch.load(model_path, map_location=device)['state_dict'])
 pretrained_dict = torch.load(model_path, map_location=device)['state_dict']

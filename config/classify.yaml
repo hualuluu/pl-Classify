@@ -1,16 +1,28 @@
 # 多分类模型训练yaml文件
 batch_size: 32
 learning_rate: 0.001
-num_classes: 3
-num_workers: 2
+num_classes: 200
+num_workers: 4
 max_epoch: 50
 num_gpus: 3
 # datasets
-data_path: ./datasets/
-input_dim: [256, 256]
+data_path: ./datasets/tiny_imagenet/
+input_dim: [256, 256] # [h, w]
 
+# data aug
+HorizontalFlip: True
+VerticalFlip: False
+RandomRotate: True
+RandomChannel: True
+RandomContrast: True
+RandomLight: True
+RandomResize: True
+letterbox: True
+Normalize: True
+mean: [0.485, 0.456, 0.406]
+std: [0.229, 0.224, 0.225]
 # path
-save_path: ./runs/20220908_resnet18/
+save_path: ./runs/20220914_tinyimagenet_resnet18/
 
 # net 
 model_name: resnet18
@@ -36,3 +48,4 @@ auto_select_gpus: False  # 自动寻找合适的GPU
 #混合精度
 amp_backend: native # apex
 precision: 16
+

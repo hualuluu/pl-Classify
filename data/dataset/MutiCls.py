@@ -3,16 +3,15 @@ import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
+from data.aug.augment import Augment
 from PIL import Image
 from utils.utils import get_singleclass_txt
 
-image_transform = transforms.Compose([
-    transforms.Resize(224),
-    transforms.RandomCrop(224),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor()
-])
+
+"""
+使用torchvision 的transforms进行数据增强，暂时不用
+改用albumentations
+"""
 
 class MutiCls(Dataset):
     """
@@ -20,17 +19,17 @@ class MutiCls(Dataset):
     需要有txt标注文件： imagepath|cls
     """
  
-    def __init__(self, root_dir, dims = (256, 256), train=True, transform=None):
+    def __init__(self, root_dir, params, train=True):
         # dataset root dir
         self.root_dir = root_dir
-        self.dims = dims
+        
         if train:
             self.labelpath = self.root_dir + 'train.txt'
         else:
             self.labelpath = self.root_dir + 'test.txt'
         
         self.image_name, self.label = get_singleclass_txt(self.labelpath)
-        self.transform = transform
+        self.au = Augment(params)
         
     def __len__(self):
         return len(self.image_name)
@@ -40,15 +39,13 @@ class MutiCls(Dataset):
         # BGR
         image = cv2.imread(self.image_name[idx])
         
-        image = cv2.resize(image, self.dims)
-        image = Image.fromarray(image)
-        
-        if self.transform:
-            image = self.transform(image)
+        image = self.au.get_augment(image)
+        image = np.transpose(image, (2, 0, 1)) # 转换通道数
+        image = torch.from_numpy(image).type(torch.FloatTensor)
 
-        label = self.label[idx]
+        label = self.label[idx]        
         label = torch.from_numpy(np.array([label]))
-        
+
         return image, label
 
 if __name__ == '__main__':

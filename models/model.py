@@ -1,12 +1,10 @@
+import sys
 import torch
 
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.types import STEP_OUTPUT
-
-
 from pytorch_lightning.callbacks import ModelCheckpoint, DeviceStatsMonitor, LearningRateMonitor, RichModelSummary
 
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 from .nets.net import Model
 from .loss.loss import Loss
 from .optimizer.optimizer import Optimizer
@@ -127,8 +125,8 @@ class MutiCls_Classify(pl.LightningModule):
             losses.append(ou['loss'])
             accs.append(ou['acc'])
 
-        self.log('train_epoch_loss', torch.stack(losses).mean(), on_step=False, on_epoch=True, prog_bar=True, logger=False)
-        self.log('train_epoch_acc', torch.stack(accs).mean(), on_step=False, on_epoch=True, prog_bar=True, logger=False)
+        self.log('train_epoch_loss', torch.stack(losses).mean(), on_step=False, on_epoch=True, prog_bar=True, logger=False, sync_dist=True)
+        self.log('train_epoch_acc', torch.stack(accs).mean(), on_step=False, on_epoch=True, prog_bar=True, logger=False, sync_dist=True)
 
     def validation_step(self, batch, batch_idx):
         # we currently return the accuracy as the validation_step/test_step is run on the IPU devices.
@@ -167,8 +165,8 @@ class MutiCls_Classify(pl.LightningModule):
             losses.append(ou['loss'])
             accs.append(ou['acc'])
 
-        self.log('val_epoch_loss', torch.stack(losses).mean(), on_step=False, on_epoch=True, prog_bar=True, logger=False)
-        self.log('val_epoch_acc', torch.stack(accs).mean(), on_step=False, on_epoch=True, prog_bar=True, logger=False)
+        self.log('val_epoch_loss', torch.stack(losses).mean(), on_step=False, on_epoch=True, prog_bar=True, logger=False,sync_dist=True)
+        self.log('val_epoch_acc', torch.stack(accs).mean(), on_step=False, on_epoch=True, prog_bar=True, logger=False,sync_dist=True)
 
     # def test_step(self, batch, batch_idx):
     
@@ -197,9 +195,9 @@ class MutiCls_Classify(pl.LightningModule):
         }
     
     def configure_callbacks(self):
-        save_path = self.hparams['hparams']['save_path']
+        
         model_checkpoint = ModelCheckpoint(
-            dirpath=save_path,
+            dirpath=self.hparams['hparams']['weights_dir'],
             monitor='val_epoch_acc',
             filename='{epoch}-{train_epoch_acc:.2f}-{val_epoch_acc:.2f}',
             save_top_k=-1,

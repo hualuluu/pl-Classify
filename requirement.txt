@@ -3,7 +3,10 @@ torchvision
 pytorch-lightning 
 tensorboard
 
-numpy
+# numpy
 PyYAML
 rich
 opencv-python
+
+matplotlib
+albumentations

@@ -1,4 +1,5 @@
 import yaml
+import os
 
 def get_singleclass_txt(txtpath):
     image_name = []
@@ -14,3 +15,4 @@ def get_yaml(yaml_file):
     with open(yaml_file, 'r', encoding='utf-8') as f:
         result = yaml.load(f.read(), Loader=yaml.FullLoader)
     return result
+
